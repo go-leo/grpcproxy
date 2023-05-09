@@ -20,7 +20,9 @@ package main
 
 import (
 	"fmt"
+	"regexp"
 	"strconv"
+	"strings"
 
 	"google.golang.org/protobuf/compiler/protogen"
 )
@@ -64,10 +66,26 @@ func genFunction(gen *protogen.Plugin, file *protogen.File, g *protogen.Generate
 	g.P("return []grpcproxy.Route{")
 	for _, method := range service.Methods {
 		if !method.Desc.IsStreamingServer() && !method.Desc.IsStreamingClient() {
+			commits := strings.Split(regexp.MustCompile(`\s+`).ReplaceAllString(method.Comments.Leading.String(), " "), " ")
+			for len(commits) < 4 {
+				commits = append(commits, "")
+			}
+
 			// Unary RPC method
 			g.P(grpcproxyPackage.Ident("NewRoute"), "(")
-			g.P(httpPackage.Ident("MethodPost"), ",")
-			g.P(strconv.Quote(formatFullMethodName(service, method)), ",")
+			if len(commits[3]) > 0 {
+				g.P(commits[0], commits[3])
+			}
+			if strings.ToUpper(commits[1]) == "GET" {
+				g.P(httpPackage.Ident("MethodGet"), ",")
+			} else {
+				g.P(httpPackage.Ident("MethodPost"), ",")
+			}
+			if len(commits[2]) > 0 {
+				g.P(strconv.Quote(commits[2]), ",")
+			} else {
+				g.P(strconv.Quote(formatFullMethodName(service, method)), ",")
+			}
 			g.P("func(c *", ginPackage.Ident("Context"), ") {")
 			g.P("req := new(", method.Input.GoIdent, ")")
 			g.P("if err := ", grpcproxyPackage.Ident("Bind"), "(c, req); err != nil {")
@@ -77,7 +95,7 @@ func genFunction(gen *protogen.Plugin, file *protogen.File, g *protogen.Generate
 			g.P("}")
 			g.P("ctx := ", grpcproxyPackage.Ident("NewContext"), "(c)")
 			g.P("var headerMD, trailerMD ", metadataPackage.Ident("MD"))
-			g.P("resp, err := cli.SayHello(ctx, req, ", grpcPackage.Ident("Header"), "(&headerMD), ", grpcPackage.Ident("Trailer"), "(&trailerMD))")
+			g.P("resp, err := cli.", method.Desc.Name(), "(ctx, req, ", grpcPackage.Ident("Header"), "(&headerMD), ", grpcPackage.Ident("Trailer"), "(&trailerMD))")
 			g.P(grpcproxyPackage.Ident("Render"), "(c, headerMD, trailerMD, resp, err)")
 			g.P("},")
 			g.P("),")

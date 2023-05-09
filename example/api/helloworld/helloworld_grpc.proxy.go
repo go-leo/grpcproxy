@@ -13,8 +13,9 @@ import (
 func GreeterProxyRoutes(cli GreeterClient) []grpcproxy.Route {
 	return []grpcproxy.Route{
 		grpcproxy.NewRoute(
-			http.MethodPost,
-			"/helloworld.Greeter/SayHello",
+			// 这是个get接口
+			http.MethodGet,
+			"/v1/SayHello",
 			func(c *gin.Context) {
 				req := new(HelloRequest)
 				if err := grpcproxy.Bind(c, req); err != nil {
@@ -25,6 +26,23 @@ func GreeterProxyRoutes(cli GreeterClient) []grpcproxy.Route {
 				ctx := grpcproxy.NewContext(c)
 				var headerMD, trailerMD metadata.MD
 				resp, err := cli.SayHello(ctx, req, grpc.Header(&headerMD), grpc.Trailer(&trailerMD))
+				grpcproxy.Render(c, headerMD, trailerMD, resp, err)
+			},
+		),
+		grpcproxy.NewRoute(
+			// 这是个post接口
+			http.MethodPost,
+			"/v2/p",
+			func(c *gin.Context) {
+				req := new(HelloRequest)
+				if err := grpcproxy.Bind(c, req); err != nil {
+					c.String(http.StatusBadRequest, err.Error())
+					_ = c.Error(err).SetType(gin.ErrorTypeBind)
+					return
+				}
+				ctx := grpcproxy.NewContext(c)
+				var headerMD, trailerMD metadata.MD
+				resp, err := cli.PostV2(ctx, req, grpc.Header(&headerMD), grpc.Trailer(&trailerMD))
 				grpcproxy.Render(c, headerMD, trailerMD, resp, err)
 			},
 		),

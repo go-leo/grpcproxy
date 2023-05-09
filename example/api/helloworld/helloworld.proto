@@ -3,7 +3,11 @@ package helloworld;
 option go_package = "github.com/go-leo/grpcproxy/example/api/helloworld;helloworld";
 
 service Greeter {
+  // Get /v1/SayHello 这是个get接口
   rpc SayHello (HelloRequest) returns (HelloReply) {}
+
+  // POST /v2/p   这是个post接口
+  rpc PostV2 (HelloRequest) returns (HelloReply) {}
 }
 
 message HelloRequest {
