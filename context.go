@@ -12,6 +12,9 @@ import (
 	"strings"
 	"time"
 
+	code_encoding "codeup.aliyun.com/qimao/leo/lib/code-encoding"
+	"codeup.aliyun.com/qimao/leo/lib/code-encoding/form"
+
 	"github.com/gin-gonic/gin"
 	"github.com/go-leo/stringx"
 	"google.golang.org/grpc/metadata"
@@ -36,6 +39,10 @@ func Bind(c *gin.Context, req proto.Message) error {
 		return err
 	}
 	return protojson.Unmarshal(body, req)
+}
+
+func GetBind(c *gin.Context, req proto.Message) error {
+	return code_encoding.GetCodec(form.Name).Unmarshal([]byte(c.Request.URL.Query().Encode()), req)
 }
 
 func NewContext(c *gin.Context) context.Context {

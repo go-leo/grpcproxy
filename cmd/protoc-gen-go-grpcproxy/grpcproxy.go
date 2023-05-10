@@ -88,7 +88,11 @@ func genFunction(gen *protogen.Plugin, file *protogen.File, g *protogen.Generate
 			}
 			g.P("func(c *", ginPackage.Ident("Context"), ") {")
 			g.P("req := new(", method.Input.GoIdent, ")")
-			g.P("if err := ", grpcproxyPackage.Ident("Bind"), "(c, req); err != nil {")
+			if strings.ToUpper(commits[1]) == "GET" {
+				g.P("if err := ", grpcproxyPackage.Ident("GetBind"), "(c, req); err != nil {")
+			} else {
+				g.P("if err := ", grpcproxyPackage.Ident("Bind"), "(c, req); err != nil {")
+			}
 			g.P("c.String(", httpPackage.Ident("StatusBadRequest"), ", err.Error())")
 			g.P("_ = c.Error(err).SetType(", ginPackage.Ident("ErrorTypeBind"), ")")
 			g.P("return")

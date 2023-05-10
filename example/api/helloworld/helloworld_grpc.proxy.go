@@ -13,12 +13,11 @@ import (
 func GreeterProxyRoutes(cli GreeterClient) []grpcproxy.Route {
 	return []grpcproxy.Route{
 		grpcproxy.NewRoute(
-			// 这是个get接口
 			http.MethodGet,
 			"/v1/SayHello",
 			func(c *gin.Context) {
 				req := new(HelloRequest)
-				if err := grpcproxy.Bind(c, req); err != nil {
+				if err := grpcproxy.GetBind(c, req); err != nil {
 					c.String(http.StatusBadRequest, err.Error())
 					_ = c.Error(err).SetType(gin.ErrorTypeBind)
 					return
