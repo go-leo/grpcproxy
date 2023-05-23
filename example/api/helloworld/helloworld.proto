@@ -4,6 +4,8 @@ option go_package = "github.com/go-leo/grpcproxy/example/api/helloworld;hellowor
 
 service Greeter {
   // Get  /v1/SayHello
+  // heheh
+  // lalalalalalalalal
   rpc SayHello (HelloRequest) returns (HelloReply) {}
 
   // POST /v2/p   这是个post接口

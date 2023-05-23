@@ -9,5 +9,7 @@ protoc_gen:
 		--go-grpc_opt=module=github.com/go-leo/grpcproxy \
 		--go-grpcproxy_out=. \
 		--go-grpcproxy_opt=module=github.com/go-leo/grpcproxy \
+		--go-grpcproxy_opt=path_to_lower=true \
+		--go-grpcproxy_opt=restful=true \
 		example/api/*/*.proto
 	@echo "--- protoc generate end ---"

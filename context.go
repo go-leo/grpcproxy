@@ -16,7 +16,7 @@ import (
 	"codeup.aliyun.com/qimao/leo/lib/code-encoding/form"
 
 	"github.com/gin-gonic/gin"
-	"github.com/go-leo/stringx"
+	"github.com/go-leo/gox/stringx"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/encoding/protojson"

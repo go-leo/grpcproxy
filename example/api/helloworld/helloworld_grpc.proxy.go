@@ -28,8 +28,8 @@ func GreeterProxyRoutes(cli GreeterClient) []grpcproxy.Route {
 				grpcproxy.Render(c, headerMD, trailerMD, resp, err)
 			},
 		),
+		// 这是个post接口
 		grpcproxy.NewRoute(
-			// 这是个post接口
 			http.MethodPost,
 			"/v2/p",
 			func(c *gin.Context) {

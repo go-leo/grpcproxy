@@ -19,10 +19,14 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
-	"regexp"
-	"strconv"
+	"github.com/go-leo/gox/stringx"
 	"strings"
+
+	//"regexp"
+	"strconv"
+	//"strings"
 
 	"google.golang.org/protobuf/compiler/protogen"
 )
@@ -66,33 +70,17 @@ func genFunction(gen *protogen.Plugin, file *protogen.File, g *protogen.Generate
 	g.P("return []grpcproxy.Route{")
 	for _, method := range service.Methods {
 		if !method.Desc.IsStreamingServer() && !method.Desc.IsStreamingClient() {
-			commits := strings.Split(regexp.MustCompile(`\s+`).ReplaceAllString(method.Comments.Leading.String(), " "), " ")
-			for len(commits) < 4 {
-				commits = append(commits, "")
-			}
-
 			// Unary RPC method
+			routerInfo := genRouterInfo(g, service, method)
+			if stringx.IsNotBlank(routerInfo.description) {
+				g.P(routerInfo.description)
+			}
 			g.P(grpcproxyPackage.Ident("NewRoute"), "(")
-			if len(commits[3]) > 0 {
-				g.P(commits[0], commits[3])
-			}
-			if strings.ToUpper(commits[1]) == "GET" {
-				g.P(httpPackage.Ident("MethodGet"), ",")
-			} else {
-				g.P(httpPackage.Ident("MethodPost"), ",")
-			}
-			if len(commits[2]) > 0 {
-				g.P(strconv.Quote(commits[2]), ",")
-			} else {
-				g.P(strconv.Quote(formatFullMethodName(service, method)), ",")
-			}
+			g.P(routerInfo.httpMethod, ",")
+			g.P(routerInfo.httpPath, ",")
 			g.P("func(c *", ginPackage.Ident("Context"), ") {")
 			g.P("req := new(", method.Input.GoIdent, ")")
-			if strings.ToUpper(commits[1]) == "GET" {
-				g.P("if err := ", grpcproxyPackage.Ident("GetBind"), "(c, req); err != nil {")
-			} else {
-				g.P("if err := ", grpcproxyPackage.Ident("Bind"), "(c, req); err != nil {")
-			}
+			g.P("if err := ", routerInfo.bindMethod, "(c, req); err != nil {")
 			g.P("c.String(", httpPackage.Ident("StatusBadRequest"), ", err.Error())")
 			g.P("_ = c.Error(err).SetType(", ginPackage.Ident("ErrorTypeBind"), ")")
 			g.P("return")
@@ -111,6 +99,82 @@ func genFunction(gen *protogen.Plugin, file *protogen.File, g *protogen.Generate
 	g.P("}")
 	g.P("}")
 
+}
+
+func genRouterInfo(g *protogen.GeneratedFile, service *protogen.Service, method *protogen.Method) *routerInfo {
+	if *restful {
+		return genRestfulRouterInfo(g, service, method)
+	}
+	return genNormalRouterInfo(service, method)
+}
+
+func genRestfulRouterInfo(g *protogen.GeneratedFile, service *protogen.Service, method *protogen.Method) *routerInfo {
+	comments := strings.TrimSpace(method.Comments.Leading.String())
+	scanner := bufio.NewScanner(strings.NewReader(comments))
+	i := -1
+	for scanner.Scan() {
+		i++
+		line := scanner.Text()
+		line = strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(line), "//"))
+		seg := strings.Split(line, " ")
+		var newSeg []string
+		for _, s := range seg {
+			ss := strings.TrimSpace(s)
+			if ss == "" {
+				continue
+			}
+			newSeg = append(newSeg, ss)
+		}
+		seg = newSeg
+		if len(seg) < 2 {
+			continue
+		}
+
+		description := ""
+		if len(seg) >= 3 {
+			description = seg[2]
+		}
+		switch strings.ToLower(seg[0]) {
+		case "get":
+			return &routerInfo{
+				httpMethod:  httpPackage.Ident("MethodGet"),
+				httpPath:    strconv.Quote(seg[1]),
+				bindMethod:  grpcproxyPackage.Ident("GetBind"),
+				description: "// " + description,
+			}
+		case "post":
+			return &routerInfo{
+				httpMethod:  httpPackage.Ident("MethodPost"),
+				httpPath:    strconv.Quote(seg[1]),
+				bindMethod:  grpcproxyPackage.Ident("Bind"),
+				description: "// " + description,
+			}
+		default:
+			continue
+		}
+	}
+	return genNormalRouterInfo(service, method)
+}
+
+func genNormalRouterInfo(service *protogen.Service, method *protogen.Method) *routerInfo {
+	httpMethod := httpPackage.Ident("MethodPost")
+	httpPath := strconv.Quote(formatFullMethodName(service, method))
+	if *pathToLower {
+		httpPath = strings.ToLower(httpPath)
+	}
+	return &routerInfo{
+		httpMethod:  httpMethod,
+		httpPath:    httpPath,
+		bindMethod:  grpcproxyPackage.Ident("Bind"),
+		description: strings.TrimSpace(method.Comments.Leading.String()),
+	}
+}
+
+type routerInfo struct {
+	httpMethod  protogen.GoIdent
+	httpPath    string
+	bindMethod  protogen.GoIdent
+	description string
 }
 
 func formatFullMethodName(service *protogen.Service, method *protogen.Method) string {
