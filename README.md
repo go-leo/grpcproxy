@@ -1,5 +1,7 @@
 # grpcproxy
 
+此项目已不维护，请使用github.com/go-leo/gors/cmd/protoc-gen-go-gors
+
 ### 快速开始
 
 1. 安装依赖
